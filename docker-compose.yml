@@ -1,0 +1,100 @@
+services:
+  postgres:
+    image: postgres
+    container_name: photo-viewer-postgres
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_PORT: 5432
+      PGDATA: /var/lib/database/pgdata
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - ./data/postgresql:/var/lib/database
+      - ./postgres/init.sql.template:/init.sql.template
+      - ./postgres/init.sh:/docker-entrypoint-initdb.d/init.sh
+    healthcheck:
+      test: pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+  migrator:
+    build: ./migrations
+    container_name: photo-viewer-migrator
+    environment:
+      MIGRATION_VERSION: "${MIGRATION_VERSION:-}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  minio:
+    image: quay.io/minio/minio
+    container_name: photo-viewer-minio
+    ports:
+      - "${MINIO_DATA_PORT}:9000"
+      - "${MINIO_WEB_PORT}:9001"
+    environment:
+      MINIO_ROOT_USER: "${MINIO_USER}" 
+      MINIO_ROOT_PASSWORD: "${MINIO_PASSWORD}"
+    volumes:
+      - ./data/minio:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: mc ready local
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+  backend-server:
+    build: ../api-server
+    container_name: photo-viewer-api-server
+    ports:
+      - "${SERVER_PORT}:8080"
+    environment:
+      APP_ENV: "${APP_ENV}"
+      SERVER_TIMEOUT: "${SERVER_TIMEOUT}"
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      MINIO_HOST: "minio"
+      MINIO_DATA_PORT: "9000"
+      MINIO_USER: "${MINIO_USER}" 
+      MINIO_PASSWORD: "${MINIO_PASSWORD}"
+      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
+      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
+      KEY_SIGNER_SECRET: "${KEY_SIGNER_SECRET}"
+      SMTP_HOST: "${SMTP_HOST}"
+      SMTP_USER: "${SMTP_USER}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD}"
+      SMTP_FROM_ADDRESS: "${SMTP_FROM_ADDRESS}"
+      VERIFICATION_CODE: "${VERIFICATION_CODE}"
+      INITIAL_PHOTOS_QUOTA: "${INITIAL_PHOTOS_QUOTA}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+
+  site:
+    build:
+      context: ../site
+      args:
+        VITE_API_URL: ${SITE_API_URL}
+        DOMAIN_NAME: ${SITE_DOMAIN_NAME}
+    container_name: photo-viewer-site
+    ports:
+      - "${SITE_PORT}:80"
+      - "${SITE_SECURE_PORT}:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
