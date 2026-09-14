@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres
-    container_name: photo-viewer-postgres
     environment:
       POSTGRES_DB: "${POSTGRES_DB}"
       POSTGRES_USER: "${POSTGRES_USER}"
@@ -22,7 +21,6 @@ services:
 
   migrator:
     build: ./migrations
-    container_name: photo-viewer-migrator
     environment:
       MIGRATION_VERSION: "${MIGRATION_VERSION:-}"
       POSTGRES_DB: "${POSTGRES_DB}"
@@ -36,7 +34,6 @@ services:
 
   minio:
     image: quay.io/minio/minio
-    container_name: photo-viewer-minio
     ports:
       - "${MINIO_DATA_PORT}:9000"
       - "${MINIO_WEB_PORT}:9001"
@@ -54,7 +51,6 @@ services:
 
   backend-server:
     build: ../api-server
-    container_name: photo-viewer-api-server
     ports:
       - "${SERVER_PORT}:8080"
     environment:
@@ -92,7 +88,6 @@ services:
       args:
         VITE_API_URL: ${SITE_API_URL}
         DOMAIN_NAME: ${SITE_DOMAIN_NAME}
-    container_name: photo-viewer-site
     ports:
       - "${SITE_PORT}:80"
       - "${SITE_SECURE_PORT}:443"
