@@ -74,6 +74,9 @@ services:
       SMTP_FROM_ADDRESS: "${SMTP_FROM_ADDRESS}"
       VERIFICATION_CODE: "${VERIFICATION_CODE}"
       INITIAL_PHOTOS_QUOTA: "${INITIAL_PHOTOS_QUOTA}"
+      FILE_ACCESS_EXPIRES: "${FILE_ACCESS_EXPIRES}"
+      JWT_ACCESS_EXPIRES: "${JWT_ACCESS_EXPIRES}"
+      JWT_REFRESH_EXPIRES: "${JWT_REFRESH_EXPIRES}"
     depends_on:
       postgres:
         condition: service_healthy
