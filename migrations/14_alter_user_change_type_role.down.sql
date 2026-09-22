@@ -1,0 +1,4 @@
+ALTER TABLE users.users
+ALTER COLUMN "role" TYPE TEXT SET DEFAULT 'user' NOT NULL;
+
+DROP TYPE user_role;
