@@ -33,7 +33,7 @@ services:
         condition: service_healthy
 
   minio:
-    image: quay.io/minio/minio
+    image: docker.io/pgsty/silo
     ports:
       - "${MINIO_DATA_PORT}:9000"
       - "${MINIO_WEB_PORT}:9001"
